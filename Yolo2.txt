@@ -1,0 +1,20 @@
+Пишем код
+
+Чтобы написать легковесное приложение для обнаружения объектов на изображении,
+нам с тобой понадобятся:
+
+- название классов датасета СОСО, которые умеет определять сеть YOLO
+(https://raw.githubusercontent.com/AlexeyAB/darknet/master/cfg/coco.names);
+
+- конфигурации для tiny-варианта сети YOLO 
+(https://raw.githubusercontent.com/AlexeyAB/darknet/master/cfg/yolo4-tiny.cfg);
+
+- веса для tiny-варианта сети YOLO
+(https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights)
+
+Дополнительно установим библиотеки OpenCV and NumPy:
+
+pip install opencv-python
+pip install numpy
+
+(iDONi на практике работал бы лижь)
