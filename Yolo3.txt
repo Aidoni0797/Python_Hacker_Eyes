@@ -1,0 +1,58 @@
+Теперь напишем приложение, которое будет находить объекты на изображении при помщи YOLO
+и отмечать их.
+
+Мы попробуем обойти CAPTCHA с изображениями грузовиков - класс truck в датасете COCO.
+Дополнительно мы посчитаем количество обнаруженных объектов нужного нам класса и выведем всю
+информацию на экран.
+
+Начинем с написания функции для применения YOLO. С ее помощью определяются самые вероятные
+классы объектов на изображении, а также координаты их границ, которые позже мы будем 
+использовать для отрисовки.
+
+import cv2
+import numpy as np
+
+def applly_yolo_object_detection(image_to_process):
+	"""
+	Распознавание и определение координат объекто на изображении
+	:param image_to_process: исходное изображение
+	:return: изображение с размеченными объектами и подписями к ним
+	"""
+	height, width, depth = image_to_process.shape
+	blob = cv2.dnn.blobFromImage(image_to_process, 1/255, (608,608), (0,0,0), swapRB=True, crop=False)
+	net.setInput(blob)
+	outs = net.forward(out_layers)
+	class_indexes, class_scores, boxes = ([] for i in range(3))
+	objects_count = 0
+	
+	#Запуск поиска объектов на изображении
+	for out in outs:
+		for obj in out:
+			scores = obj[5:]
+			class_index = np.aargmax(scores)
+			class_score = scores[class_index]
+			if class_score > 0:
+				center_x = int(obj[0]*width)
+				center_y = int(obj[1]*height)
+				obj_width = int(obj[2]*width)
+				obj_height = int(obj[3]*height)
+				box = [center_x-obj_width // 2, center_y - obj_height //2, obj_width, obj_height]
+				boxes.append(box)
+				class_indexes.append(class_index)
+				class_scores.append(float(class_score))
+	#Выборка
+	chosen_boxes = cv2.dnn.NMSBoxes(boxes, class_scores, 0.0, 0.4)
+	for box_index in chosen_boxes:
+		box_index = box_index[0]
+		box = boxes[box_index]
+		class_index = class_indexes[box_index]
+		
+		#Для отладки рисуем объекты, входящие в искомые классы
+		if classes[class_index] in classes_to_look_for:
+			objects_count +-=1
+			image_to_process = raw_object_bounding_box(image_to_process, class_index, box)
+	
+	final_image = draw_object_count(image_to_process, objects_count)
+	return finale_image
+
+(iDONi ты ничего не понимаешь есть ли смысл переписывать, я тебе говорила это ничего не даст)
