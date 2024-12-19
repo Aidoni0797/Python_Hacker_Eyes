@@ -1,0 +1,45 @@
+Напишем функцию, которая будет анализировать изображение и выводить на экран результат
+работы написанных нами алгоритмов.
+
+def start_image_object_detection()
+	"""
+	Анализ изображения
+	"""
+	try:
+		#Применение методов распознавания объектов на изображении от YOLO
+		image = cv2.imread("assets/truck_captcha.png")
+		image = apply_yolo_object_detection(image)
+		
+		#Вывод обработанного изображения на экран
+		cv2.imshow("Image", image)
+		if cv2.waitKey(0):
+			cv2.destroyAllWindows()
+	except KeyboardInterrupt:
+		pass
+
+А теперь мы создадим функцию main, в которой настроим нашу сеть, и попробуем
+запустить ее.
+
+if __name__ == '__main__':
+	#Загрузка весов YOLO из файлов и настройка сети
+	net = cv2.dnn.readNetFromDarknet("yolov4-tiny.cfg", "yolo4-tiny.weights")
+	layer_names = net.getLayerNames()
+	out_layers_indexes = net.getUnconnectedOutLayers()
+	out_layers = [layer_names[index[0]-1] for inex in out_layers_inexes]
+
+	#Загрузка из файла классов объектов, которые умеет обнаруживать YOLO
+	with open("coco.names.txt") as file:
+		classes = file.read().split("\n")
+	
+	#Определение классов, которые будут приоритетными для поиска на изображении
+	#Названия находятся  файле oco.names.txt
+	#В данном случае определяется грузовик для прохождения CAPTCHA
+	classes_to_look_for = ["truck"]
+
+Давай посмотрим, как алгоритм YOLO справился с тестом простой CAPTCHA
+
+Некоторая погрешность все эе есть, но два из трех грузоиков алгоритм выбрал правильно.
+
+Кажется, пока что восстание машин нам не грозит!:)
+
+Эти конечно предложения из книги. iDONi читай, только не надо не понимать, надо понимать.
