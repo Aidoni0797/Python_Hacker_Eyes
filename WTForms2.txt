@@ -1,0 +1,19 @@
+Установка
+
+Для начала установим саму библиотеку.Я буду показывать примеры на Python 3.
+Там, где нужен контекст, код исполняется в обработчике фреймворка aiohttp
+(https://docs.aiohttp.org/en/stable/). Сути это не меняет - примеры будут работать
+с Flask (http://flask.pocoo.org/), Sanic (https://github.com/huge-success/sanic) или
+любым другим модулем. В качестве шаблонизатора используется Jinja2
+(https://jinja.palletsprojects.com/en/2.10.x/). Устанавливаем через pip:
+
+pip install wtforms
+
+Проверяем версию.
+
+import wtforms
+wtforms.__version__
+
+'2.2.1'
+
+Попробуем переписать форму выше на WTForms и обработать ее.
