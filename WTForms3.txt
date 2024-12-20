@@ -1,0 +1,22 @@
+—оздание формы
+
+¬ WTForms естьр€д встроенных классов дл€ описани€ форм и их полей. ќпределение формы - 
+это класс, наследуемый от встроенного в бибилиотеку класса For.
+ѕол€ формы описываютс€ атрибутами класса, каждому из которых при создании присваеваетс€ 
+инстанс класса пол€ типа, соответствующего типу пол€ формы. «вучит сложно, на деле проще.
+
+from wtforms import Form, StringField, TextAreaField, SelectField, validators
+
+class UserForm(Form):
+	first_name = StringField('First name', [validators.length(min = 5, max = 30)])
+	last_name = StringField('Last name', [validators.length(min=5, max=30)])
+	
+	email = StringField('Email', [validators.Email()])
+	password = StringField('Password')
+	
+	#meta
+	gender = SelectField('Gender', coerce=int, choices=[(0,'Male'), (1,'Female'),])
+	city = StringField('City')
+	signature = TextAreaField('Your signature', [validators.Length(min=10, max=4096)])
+
+¬от, что мы сделали.
