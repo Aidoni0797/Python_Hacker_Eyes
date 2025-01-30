@@ -1,0 +1,52 @@
+Опции для частичного парсинга пейлоада.
+
+Если ты внимательно читал предыдущий раздел, у тебя непременно возник вопрос:
+а как модель пользователся заполняется данным формы? Ведь форма ничего не знает
+о полях ORM (которой может не быть). Так как же происходит маппинг
+полей формы к объекту в функции populate from WTForms? Проще всего посмотреть
+код этой функции.
+
+Siganute: form.populate_obj(obj)
+Source:
+	def populate_obj(self, obj):
+		"""
+			Populates the attributes of the passed 'obj' with data from the form's
+			fields.
+			
+			:note: This is a destructive operation; Any attribute with the same name
+				as aa field will be overriddden. Use with caution.
+		"""
+		for name, field in iteritems(self._fields):
+			field.populate_obj(obj, name)
+
+Как видишь, функция получает список всех полей нашей формы, а затем, итерируясь по списку,
+присваивает атрибутам предоставленного объекта значния. Вдобавок ко всему это происходит рекурсивно:
+это нужно для полей-контейнеров
+FormFields (https://wtforms.readthedocs.io/en/stable/fields/#wtforms.fields.FormField).
+
+В большинстве случаев это работает отлично. Даже для полей-ассоциаций: у пользователя может
+быть поле, значением которого выступает реляция в БД, например группа, к которой принадлежит пользователь.
+В этом случае воспользуйся классом wtforms.fields.SelectField, передав choices = [...] со 
+списком возможных значений реляций, и на сервере при наличии ORM это будет распознано без проблем.
+
+Однако иногда все-таки нужно автоматически заполнить атрибуты класса только  частью полей формы,
+а остальные как-то препроцессить. Варианта два.
+
+1. Не использовать встроенную функцию populate_obj вообще и обрабатывать все поля вручную, 
+получая доступ к ним через атрибут .data каждого поля формы вроде form.f_name.data.
+
+2. Написать свой метод заполнения объекта данными формы.
+
+Мне больше нравится второй вариант (хотя он и имеет ограничения). Например, так:
+
+from wtforms.compat import itertimes, itervalues, with_metaclass
+
+def populate_selective(form, obj, exclude=[]):
+	for name,  field in filter(lambda f: f[0] not in exclude, iteritmes(form._fields)):
+		field.populate_obj(obj, name)
+
+Теперь можно использовать из формы только те поля, которые нужны
+
+populate_selective(form, user, exclude=['f_nam', 'l_name', 'city'])
+
+А с остальными разбираться по собтвенной логике.
