@@ -1,0 +1,46 @@
+—борные и наследуемые формы
+
+¬ самом начале мы говорили, что одна и та же форма может использоватьс€  в разных ситуаци€х.
+ќбычно мы выносим описание формы в отдельный модуль, а затем его импортируем. Ќо в одном
+случае у нас должен быть только минимальный набор полей (атрибутов) формы, а в другом -
+расширенный. »збежать дублировани€ определений классов форм нам поможет их наследование.
+
+ќпределим базовый класс формы:
+
+class UserBaaseForm(Form):
+	email = StringField('Email', [validators.Email()])
+	password = StringField('Password')
+
+¬ нем будут только те пол€, которые необходимы дл€ создани€ пользовательского аккаунта.
+ј затем определим расширенный, который будет наследоватьс€ от базового:
+
+class UserextendedForm(UserBaseeForm):
+	first_name = StringField('First name', [validators.Length(min=4, max=25)])
+	last_name = StringField('Last name', [validators.Length(min=4, max=25)])
+
+—оздадим две формы и посмотрим, какие пол€ у них есть.
+
+base_form = UserBaseForm()
+base_form._fields
+
+OrderedDict([('email', <wtforms.fields.core.StringField at 0x106bldf60>),
+		('password', <wtforms.fields.core.StringField at 0x106bld630>)])
+
+ј теперь посмотрим, что содержит наша расширенна€ форма:
+
+extended_form = UserxtenddForm()
+extended_form._fields
+
+OrderedDict([('email', <wtforms.fields.core.StringField at 0x106bldf60>),
+		('password', <wtforms.fields.core.StringField at 0x106bld630>),
+		('first_name', <wtforms.fields.core.StringField at 0x106bld630>),
+		('last_name', <wtforms.fields.core.StringField at 0x106bld630>)])
+
+ ак видишь, она содержит не только описанные пол€, но и те, которые были определены
+в базовом классе. “аким образом, мы можем моздавать сложные формы, наследу€ их друг от друга, 
+и использовать в текущем контроллере ту, котора€ нам в данный момент необходима.
+
+ƒругой способ создани€ сложных форма - уже упом€нутый FormField
+(https://wtforms.readthedocs.io/en/stable/fields/#wtforms.fields.FormField).
+Ёто отдельный класс пол€, который может наследовать уже существующий класс формы.
+Ќапример, вместе с Post можно создать и нового Use дл€ этого поста, префиксив названи€м полей.
