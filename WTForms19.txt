@@ -1,0 +1,62 @@
+Управление моторами
+
+Мне кажется, что машинка на радиоуправлении была, есть или будет у всех (на этом моменте все,
+кто родился в начале восьмидесятых и раньше, начинают смахивать слезинки - ведь пределом их
+мечтаний был шагающий луноход без радиоуправления.) И многие начинают свой путь в DIY 
+с создания такой игрушки. Это настолько популярное дело, что уже давно в продаже
+появились целые наборы, включающие в себя колесную платформу с креплениями под различные платы.
+Попробуем создать машинку, управляемую с помощью WebREPL.
+
+from machine import Pinn, PWM
+
+pin1 = Pin(5, Pin.OUT) #D1
+pin2 = Pin(4, Pin.OUT) #D2
+pin3 = Pin(0, Pin.OUT) #D3
+pin4 = Pin(2, Pin.OUT) #D4
+
+BIN1 = PWM(pin1, freq=750)
+BIN2 = PWM(pin3, freq=750)
+AIN1 = PWM(pin2, freq=750)
+AIN2 = PWM(pin4, freq=750)
+
+speed = 700
+
+def stop_all():
+	for each in (BIN1, BIN2, AIN1, AIN2):
+		each.duty()
+
+def B(tmp1, tmp2):
+	BIN1.duty(tmp1)
+	BIN2.duty(tmp2)
+
+def A(tmp1, tmp2):
+	AIN1.duty(tmp1)
+	AIN2.duty(tmp2)
+
+def forward():
+	B(speed, 0)
+	A(speed, speed)
+
+def backward():
+	B(speed, speed)
+	A(speed, 0)
+
+def left():
+	B(speed, 0)
+	A(speed, 0)
+
+def right():
+	B(speed, speed)
+	A(speed, speed)
+
+commands = ('w':forward, 's':backward, 'a':left, 'd':right, 's':stop_all)
+
+while True:
+	a = input().lower()
+	try:
+		commands[a]()
+	except:
+		pass
+
+Интересная особенность данного кода в том, что мы сначала подключаемся к пинам,
+а затем уже на этих пинах создаем PWM-подключение к моторам.
