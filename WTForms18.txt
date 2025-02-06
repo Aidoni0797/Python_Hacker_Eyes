@@ -1,0 +1,78 @@
+Настраиваем Wi-Fi и управляем через сайт
+
+Действительно, каждый раз подключаться к локальной сети платы неудобно. Но
+можно настроить плату так, чтобы она подключалась к уже созданной Wi-Fi сети.
+
+import network
+sta_if = network.WLAN(network.STA_IF)
+sta_if.active(True)
+sta_if.connect('<your ESSID>', '<your password>')
+sta_if.isconnected() ##True
+sta_if.ifconfig() ##('192.168.0.2', '255.255.255.0', '192.168.0.1', '8.8.8.8')
+
+Здесь показано, как подключиться к заданной Wi-FI сети путем последовательного выполнения команд.
+Но ведь это очень монотонно. Официальное руководство советует добавить следующую функцию
+в файл boot.py
+
+def do_connect():
+	import network
+	sta_if = network.WLAN(network.STA_IF)
+	if not sta_if.connected():
+		print('connecting to network...')
+		sta_if.active(True)
+		sta_if.connect('<essid>', '<password>')
+		while not sta_if.isconnected():
+			pass
+	print('network config:', sta_if.ifconfig())
+
+Отлично. Мы подключили нашу плату к Интернету. Давай попробуем управлять светодиодом 
+с помощью обычного сайта. Нам не понадобятся никакие модули вроде Flask or Django.
+Только socket. Только хардкор.
+
+import socket
+import machine
+
+html = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>
+ESP8266 Controller
+</title>
+</head>
+<form>
+<h1>ESP8266 Controller</h1>
+<button name="LED" value="ON" type="submit">ON</button><br>
+<button name="LED" value="OFF" type="submit">OFF</button><br>
+</form>
+</html>
+"""
+pin = machine.Pin(2, machine.Pin.OUT)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(('', 80))
+s.listen(5)
+while True:
+	conn, addr = s.accept()
+	print('Connect with' + str(addr))
+	request = conn.recv(1024)
+	request = str(request)
+	LEDON = request.find('/?LED=ON')
+	LEDOFF = request.find('/?LED=OFF')
+	
+	if LEDON == 6:
+		print('TURN LED0 ON')
+		pin.off()
+	if LEDOFF == 6:
+		print('TURN LED0 OFF')
+		pin.on()
+	response = html
+	conn.send(response)
+	conn.close()
+
+В начале записан HTML-код странички. Там две кнопки - одна на включение, другая на выключение.
+По сути, они просто создают и отправляют POST-запросы на сервер.
+
+После описания сайта опять подключаем встроенный светодиод, а затем создаем сервер.
+Задача сервера - отлавливать запросы и если в них попадаются команды на включение/выключение
+светодиода, обрабатывать их.
