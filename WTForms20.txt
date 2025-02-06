@@ -1,0 +1,51 @@
+Интернет вещей
+
+Как-то неловко вышло... ESP8266 позиционируется как плата для разработки в сфере IoT, 
+а мы пока ничего не сделали. Одно из базовых понятий IoT - MQTT-протокол. Чтобы не тратить
+время на настройку своего MQTT-сервера, воспользуемя платформой Adafruit IO 
+(https://io.adafruit.com/). А библиотека для работы с этим протоколом уже включена в сборку
+MicroPython и называется umqtt.
+
+Перед непосредственно программированием необходимо настроить Adafruit IO. Регистрируемя, 
+создаем новый feed и называем его enablefield. Затем создаем новый Dashboard и добавляем
+на него кнопку-переключатель. При добавлении следует указать имя созданного нами feed'a.
+Для подключения нам необходимо имя аккаунта и так называемый Active Key.
+
+import network
+from umqtt.simple import MQTTClient
+import machine
+
+pin = machine.Pin(2, machine.Pin.OUT)
+
+def sub_cb(topic, msg):
+	print(msg)
+	if msg==b'ON':
+		pin.off()
+	elif msg==b'OFF':
+		pin.on()
+
+sta_if = network.WLAN(network.STA_IF)
+sta_if.active(True)
+sta_if.connect('<SSID>','<PASSWORD>')
+
+client = MQTTClient('my_device','io.adafruit.com',user='<USER_LOGIN>',
+password='<API-KEY>', port=1883)
+client.set_callback(sub_cb)
+client.connect()
+client.subscribe(topic='<USER_LOGIN>/feeds/<FEEDNAME>')
+while True:
+	client.wait_msg()
+
+Для работы с внешним MQTT-сервером необходимо подключение к Wi-Fi-сети с доступом в Интернет.
+Функция sub_cb(topic,msg) отвечает за то, что происходит, если в заданный топик приходит сообщение.
+После подключения к Wi-Fi создается подключение к MQTT-серверу. Описываются топики,
+на которые подписан клиент, и запускается бесконечное ожидание сообщений в топике.
+
+Заключение
+
+MicroPython - очень молодой проект, но он уже достаточно популярен и даже попал в список 30
+Amazing Python Projects for the Past Year
+(https://medium.mybridge.co/30-amazing-python-projects-for-the-past-year-v-2018-9c310b04cdb3).
+И мне кажется, что это только начало, ведь на GitHub уже немало проектов, написанных 
+на MicroPython, a Adafruit даже разработала свою версию, предназначенную для обучения - 
+CircuitPython.
