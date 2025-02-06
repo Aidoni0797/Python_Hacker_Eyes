@@ -1,0 +1,78 @@
+Радужный мир
+
+Одна из стандартных библиотек, поставляемых с MicroPython - библиотека NeoPixel.
+Она используется для работы с RGB-светодиодами, выпускаемыми компанией Adafruit.
+Для подключения нужно три пина. Один - земля, второй - питание, а третьи необходим
+для управления. У меня это GPIO4, а ты можешь выбрать любой.
+
+import machine, neopixel, time, urandom
+
+my_neopixel_ring = neopixel.NeoPixel(machine.Pin(4), 16)
+
+def color_all(neopixel_ring, color):
+	for i in range(neopixel_ring.n):	
+		neopixel_ring[i] = color
+	neopixel_ring.write()
+
+def color_all_skow(neopixel_ring, color):
+	for i in range(neopixel_ring.n):
+		neopixel_ring[i] = color
+		neopixel_ring.write()
+		time.sleep(0.5)
+
+def color_random(neopixel_ring):
+	for i in range(neopixel_ring.n):
+		color = (urandom.getrandbits(8), urandom.getrandbits(8),
+				urandom.getrandbits(8))
+		neopixel_ring[i] = color
+	neopixel_ring.write()
+
+def disable(neopixel_ring):
+	for i in range(neopixel_ring.n):
+		neopixel_ring[i] = (0,0,0)
+	neopixel_ring.write()
+
+def show(neopixel_ring):
+	RAINBOW_COLORS = [(255,0,0), (255,0,255)]
+	for i in RAINBOW_COLORS:
+		color_all(neopixel_ring, i)
+		time.sleep(0.5)
+	time.sleep(5)
+	disable(neopixel_ring)
+	for i in RAINBOW_COLORS:
+		color_all_slow(neopixel_ring, i)
+		time.sleep(0.5)
+	for i in range(100):
+		color_random(neopixel_ring)
+		time.sleep(0.5)
+	disable(neopixel_ring)
+
+Ух, сколько здесь всего! Начнем с подключения. Для создания объекта типа NeoPixel адресные,
+и можно подключать много модулей последовательно. По сути, это массив, в каждом элементе
+которого хранится кортеж определенного формата (RGB).
+
+Функция color_all окрашивает все светодиоды в один цвет. Причем для визуального наблюдателя
+это происходит "мгновенно", а вот в функции color_all_slow включение будет происходить
+по одному светодиоду с задержкой в полсекунды. Это зависит от того, когда вызывается функция 
+write(). Именно она отвечает за "проявление" цвета.
+
+Следующая фукнция, color_random, орашивает все светодиоды в разные случайные цвета.
+Именно здесь заметно отличие от версии Python, запускаемой на компьютере. Как бы сгенерировали
+случайный кортеж на компьютере:
+
+import random
+color = (random.randrage(256), random.randage(256), random.randage(256))
+
+Но здесь нет модуля random. Зато есть urandom. С помощью функции getrandbits можно получить
+случайный набор бит определенной длины, т.е. случайное число в диапазоне от нуля до двойки
+в какой-то степени. В данном случае - до восьми.
+
+Для того чтобы выключить свотодиод, необходимо задать ему цвет, равный (0,0,0). Ой. А как же 
+яркость? Ведь когда цвет задается с помощью RGB, обычно присутствует такой параметр,
+как яркость (прозрачность). Здесь она задается с помощью обыкновенной математики:
+- (255,255,255) - белый на максимальной яркости;
+- (128,128,128) - белый с яркостью 50%;
+- (64,64,64) - белый с яркостью 25%.
+
+Функция show - это просто демонстрационная функция, в которой показывается, как работают
+уже разобранные функции.
