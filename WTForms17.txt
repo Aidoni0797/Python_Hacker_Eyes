@@ -1,0 +1,61 @@
+Монитор. Рисование, письмо и каллиграфия
+
+Очень часто неохота лезть на устройство, чтобы посмотреть какие-то данные. Значит, их нужно
+куда-то выводить. Например, на экран.
+
+from ssd1306 import SSSD1306_12C
+import machine
+from writer import Writer
+import freesans20
+import time
+
+WIDTH = const(128)
+HEIGHT = const(64)
+
+pacl = machine.Pin(4, machine.Pin.OUT)
+psda = machine.Pin(5, machine.Pin.OUT)
+i2c = machine.I2C(scl=pscl, sda=psda)
+
+ssd = SSD1306_I2C(WIDTH, HEIGHT, i2c, 0x3c)
+
+ssd.fill(l)
+ssd.show()
+time.sleep(0.5)
+ssd.fill(0)
+ssd.show()
+
+ssd.line(40,0,40,HEIGHT,l)
+
+square_side = 40
+ssd.fill_rect(0,0,square_side,square_side,l)
+
+ssd.text('Hello',50,10)
+
+wri2 = Writer(ssd, freesans20, verbose=False)
+Writer.set_clip(True, True)
+Writer.set_textpos(32, 64)
+wri2.printstring('][akep\n')
+ssd.show()
+
+Для работы с монитором необходима библиотека ssd1306, ее можно загрузить с GitHub
+(https://github.com/adafruit/miropython-adafruit-ssd1306). Для подключения по протоколу
+I2C нам необходимо два пина, используем GPIO4 как scl, а GPIO5 как sda. Инициализируем
+I2C - подключение. Для проверки после инициализации переменной i2c можно вызвать функцию
+i2c.scan().  Если ты все правильно подключил, то в качестве результата будет список вида [60].
+Это номер I2C-порта. Если увидел пустой список - значит, какая-то проблема с подключением.
+Что можно сделать с экраном?
+
+- Заполнить одним цветом: белым - ssd.fill(1) или черным - ssd.fill(0)
+- Обновить изображение на экране - ssd.show()
+- Нарисовать линию (x0,y0,x1,y1) толщиной t - ssd.line(x0,y0,x1,y1,t).
+- Нарисовать пиксель заданного цвета по координатам - ssd.pixel(x,y,c).
+- Нарисовать прямоугольник, задаваемый начальной точкой, длинами сторон и цветом -
+ssd.fill_rect(x0,y0,lenth,width,color).
+- Сделать надпись стандартным шрифтом - ssd.text('',x0,y0).
+
+Ну у стандартного шрифта есть свои недостатки, поэтому на GitHub (https://github.com/peterhinch
+/micropython-samples/tree/master/SSD1306)  уже можно найти способ создать и использовать
+свои шрифты. Для этого надо создать свой шрифт с помощью font-to-py.py
+(https://github.com.peterbinch/micropython-font-to-py), загрузить созданный шрифт и модуль 
+Writer на устройство и использовать, как продемонстировано в примере.
+
