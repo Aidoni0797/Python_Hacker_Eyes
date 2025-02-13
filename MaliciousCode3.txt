@@ -1,0 +1,55 @@
+—ледим за файловыми операци€ми
+
+«десь, как мы и говорили в начале, можно пойти двум€ пут€ми: использовать специализированные
+API-функции Windows или возможности, предоставл€емые механизмом WMI. ¬ обоих случа€х мониторинг
+событий лучше выполн€ть в отдельном потоке, так же, как мы сделали при отслеживании процессов.
+ѕоэтому дл€ начала опишем базовый класс FileMonitor, а затем от него наследуем класс
+FileMonitorAPI, в котором будем использовать специализированные API-функции Windows, and class
+FileMonitorWMI, в котором применим механизмы WMI.
+
+»так, наш базовый класс будет выгл€деть примерно так:
+class FileMonitor:
+	def __init__(self, notify_filter, **kwargs):
+		self._notify_filter = notify_filter
+		self._kwargs = kwargs
+		self._event_properties = {
+			'Drive': None,
+			'Path': None,
+			'FileName': None,
+			'Extension': None,
+			'Timestamp': None,
+			'EventType': None,
+		}
+	@property
+	def drive(self):		
+		return self._event_properties['Drive']
+
+	@property
+	def path(self):		
+		return self._event_properties['Path']
+
+	@property
+	def file_name(self):		
+		return self._event_properties['FileName']
+
+	@property
+	def extension(self):		
+		return self._event_properties['Extension']
+
+	@property
+	def timestamp(self):		
+		return self._event_properties['Timestamp']
+
+	@property
+	def event_type(self):		
+		return self._event_properties['EventType']
+
+«дес при инициализации также используетс€ параметр notify_filter (его возможные знани€
+определ€ютс€ в зависимости от того, используетс€ API or WMI) и параметр **kwargs, с помощью
+которого определ€етс€ путь к отслеживаемому файлу или каталогу, его им€, расширение и пр.
+Ёти значени€ также завис€т от использвоани€ API or WMI и будут конкретизированы уже в классах-
+наследниках. ѕри инициализации класса создаетс€ словарь _event_property дл€ хранени€ свойств
+событи€: им€ диска, путь к файлу, им€ файла, расширение, метка времени и тип событи€
+(по аналогии с классом мониторинга событий процессов). Ќу а с остальными методами нашего
+базового класса, € думаю, все и так пон€тно: они позвол€ют получить значени€
+соответствующего пол€ из словар€ свойств событи€.
