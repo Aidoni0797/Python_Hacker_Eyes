@@ -1,0 +1,132 @@
+Отслеживаем процессы (очень интересно да, отслеживать, особенно жизнь)
+
+Отслеживать процессы будем с помощью механизма WMI. Это делается достаточно просто:
+
+import wmi
+
+notify_filter = "creation"
+process_watcher = wmi.WMI().Win32_Process.watch_for(notify_filter)
+
+while True:
+	new_process = process_watcher()
+	print(new_process.Caption)
+	print(new_process.CreationDate)
+
+Здесь notify_filter может принимать следующие значения:
+
+operation - реагируем на все возможные операции с процессами
+creation - реагируем только на создание (запуск) процесса
+deletion - реагируем только на завершение (уничтожение) процесса
+modification - реагируем только на изменения в процессе
+
+Далее (в третьей строке) мы создаем объект-наблюдатель process_watcher, который будет
+срабатывать каждый раз, когда наступает событие с процессами, определенное в notify_filter
+(в нашем случае при его запуске). После чего мы в бесконечном цикле выводим имя вновь
+запущенного процесса и время его запуска. Время представлено в виде строки в формате 
+yyyymmddHHMMSS.mmmmmmsYYY (более подробно об этом формате можно почитать здесь)
+(https://docs.microsoft.com/ru-ru/windows/win32/wmisdk/cim-datetime), поэтому для вывода
+времени в более привычной форме можно написать нечто вроде функции преобразования формата
+времени:
+
+def date_time_format(date_time):
+	year = date_time[:4]
+	month = date_time[4:6]
+	day = date_time[6:8]
+	hour = date_time[8:10]
+	minutes = date_time[10:12]
+	seconds = date_time[12:14]
+	rturn '{0}/{1}/{2} {3}:{4}:{5}'.format(day, month, year, hour, minutes, seconds)
+
+Вообще, делать такие вещи просто в бесконечном цикле не очень хорошо, поэтому мы оформим все
+это в виде класса, чтобы потом запускать его в отдельном потоке. Таким образом мы получим 
+возможность отслеживать в одном потоке, например моменты создания процессов, а в другом -
+их уничтожения. Итак, класс
+ProcessMonitor:
+
+class ProcessMonitor():
+	def __init__(self, notify_filter='operation'):
+		self._process_property = (
+			'Caption': None,
+			'CreationDate': None,
+			'ProcessID': None,
+		)
+		self._process_watcher = wmi.WMI().Win32_Process.watch_for(
+			notify_filter
+		)
+	def update(self):
+		process = self._process_watcher()
+		self._process_property['EventType'] = proocess.event_type
+		self._process_property['Caption'] = process.Caption
+		self._process_property['CrationDate'] = process.CreationDate
+		self._process_property['ProcessID'] = process.ProcessID
+	
+	@property
+	def event_type(self):
+		return self._process_property['EventType']
+
+	@property
+	def caption(self):
+		return self._process_property['Caption']
+
+	@property	
+	def creation_date(self):
+		return date_time_format(self._process_property['CreationDate'])
+
+	@property
+	def process_id(self):
+		return self._process_property['ProcessID']
+
+При инициализайии класса мы создаем список свойств процесса _process_property в виде словаря и
+определяем объект наблюдателя за процессами (при этом значение protify_filter может быть
+определено в момент инициализации класа и по умолчанию задано как "operation"). Список свойств
+процесса может быть расширен (более подробно о свойствах процессов можно почитать здесь:
+https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process).
+
+Метод update() обновляет поля _process_property, когда происходит событие, опрееленное 
+значением notify_filter, а методы event_type, caption, creation_date and process_id
+возволяют получить значения соответсвующих полей списка свойств процесса
+(обрати внимание, что эти методы объявлены как свойства класса с использованием декоратора
+@property).
+
+Теперь, все это можно запускать в отдельном потоке. Для начала создадим класс Monitor,
+наследуемый от класса Thread (from Python-module threading: https://docs.python.org/3/
+library/threading.html):
+
+from threading import Thread
+import wmi
+import pythoncom
+...
+# Не забываем встаивть здесь описание класса ProcessMonitor
+...
+class Monitor(Thread):
+	def __init__(self, action):
+		self._action = action
+		Thread.__init__(self)
+
+	def run(self):
+		pythoncom.CoInitialize()
+		proc_mon = ProcessMonitor(self._action)
+		while True:
+			proc_mon.update()
+			print(
+				proc_mon.creation_date,
+				proc_mon.event_type,
+				proc_mon.name,
+				proc_mon.process_id
+			)
+		pythoncom.CoUninitialize()
+
+При желании цикл можно сделать прерываемым, например по нажатии какого-либо сочетания клавиш
+(для этого нужно использовать возможности модуля keyboard) (https://pypi.org/project/keyboard)
+и его функции is_pressed(). Вместо вывода результатов на экран можно писать результат программы
+в лог-файл, для чего применяется соответствующая функция, которую следует использовать
+вместо print(). (Print  не покидай меня ты же крутой)
+
+Далее уже можно запускать мониторинг событий процессов в отдельных потоках:
+#Отслеживаем события создания процессов
+mon_creation = Monitor('creation')
+mon_creation.start()
+#Отслеживаем события уничтожения процессов
+mon_deletion = Monitor('deletion')
+mon.deletion.start()
+В итоге получим примерно следдующую картину.
