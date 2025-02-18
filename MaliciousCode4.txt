@@ -1,0 +1,182 @@
+Используем API Windows
+
+В основу этого варианта реализации мониторинга будет положена функция WaitForSingleObject()
+(https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject).
+Упомянутая функция занимается тем, что ждет, когда объек (хендл которого передан в качестве
+первого параметра) перейдет в сигнальное состояние, и возвращает WAIT_OBJECT_0, когда объект
+изменит свое состояние. Помимо этой функции в Windows есть весьма полезная функция 
+ReadDirectoryChangesW() (https://docs.microsoft.com/en-us/windows/win32/api/winbase/
+nf-winbase-readdirectorychangesw), назначение которой - следить за изменениями файла или 
+каталога, указанного в одном из параметров функции. Также в процессе мониторинга мы задействуем
+API CrateFile() (https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea)
+and CreatEvent() (https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createeventa)
+
+Итак, начнем
+
+#Подключим все необходимые модули
+import pywintypes
+import win32api
+import win32event
+import win32con
+import win32file
+import winnt
+
+class FileMonitorAPI(FileMonitor):
+	def __init__(self, notify_filter = 'FileNameChange', **kwargs):		
+		#Здесь в качестве **kwargs необходимо указывать
+		#путь к файлу или директории
+		#в виде "Path=r'e:\\example\\file.txt'"
+		FileMonitor.__init__(self, notify_filter, **kwargs)
+		#Получаем хендл нужного файла или каталога
+		self._directory = win32file.CreateFile(
+			self._kwargs['Path'],
+			winnt.FILE_LIST_DIRECTORY,
+			win32con.FILE_SHARE_READ,
+			win32con.FILE_SHARE_WRITE,
+			None,
+			win32con.OPEN_EXISTING,
+			win32con.FILE_FLAG_BACKUP_SMANTICS
+			win32con.FILE_FLAG_OVERLAPPED,
+			None
+		)
+		#Инициализируем структуру типа OVERLAPPED
+		self._overlapped = pywintypes.OVERLAPPED()
+		#и поместим в нее хендл объекта событие в сброшенном состоянии
+		self._overlapped.hEvent = win32event.CreateEvent(
+			None,
+			False,
+			False,
+			None
+		)
+		#Выделяем память, куда будет записана информация
+		#об отслеживаемом файле или каталоге
+		self._buffer = win32file.AllocateReadBuffer(1024)
+		#Здесь будет число байтов сведений о файле или каталоге,
+		#записанных при наступлении события
+		self._num_bytes_returned = 0
+		#Установим наблюдатель за событиями (его мы опишем ниже)
+		self._set_watcher()
+
+Значения параметра notify_filter коррелируют с константами FILE_NOTIFY_CHANGE_FILE_NAME,
+FILE_NOTIFY_CHANGE_DIR_NAME or FILE_NOTIFY_CHANGE_LAST_WRITE. Для их преобразования мы ниже опишем
+специальный метод. Также определим метод update(), с помощью которого и будем обновлять
+сведения о призошедшем событии.
+def update(self):
+	while True:
+		#Ждем наступления события поскольку второй параметр 0, то время ожидания бесконечно
+		result = win32event.WaitForSingleObject(self._overlapped.hEvent, 0)
+		if result == win32con.WAIT_OBJECT_0:
+			#Если событи произошло, то получим размер сохраненных сведений о событии
+			self._num_bytes_returned = win32file.GetOverlappedResult(
+				self._directory,
+				self._overlapped,
+				True
+			)
+			#Поместим информацию о событии в _event_properties
+			self._event_properties['Path'] = self._get_path()
+			self._event_properties['FileName'] = self._get_file_name()
+			self._set_watcher()
+			break
+
+Напишем метод установки нанаблюдателя за событиями в файловой системе (в ней мы задействуем
+функцию ReadDirectoryChangesW()):
+def _set_watcher(self):
+	win32file.ReadDirectoryChangesW(
+		self._directory,
+		self._buffer,
+		True,
+		self._get_notify_filter_const(),
+		self._overlapped,
+		None
+	)
+
+Поскольку в качестве одного из параметров ReadDirectoryChangesW() принимает константы,
+определяющие тип отслеживаемого события, то определим метод, преобразующий значения
+параметра notifu_filter в указанные константыю
+
+def _get_notify_filter_const(self):
+	if self._notify_filter == 'FileNameChange':
+		return win32con.FILE_NOTIFY_CHANGE_FILE_NAME
+	...
+
+Здесь для простоты показано преобразование в константу только одного значения
+notify_filter, по аналогии можно описать преобразование других значений
+notify_filter в константы FILE_NOTIFY_CHANGE_DIR_NAME or FILE_NOTIFY_CHANGE_LAST_WRITE.
+
+Далее определим методы, возвращающие сохраненные в буфере _buffer свойства события при 
+наступлении этого события. Возвращающиц тип события метод выглядит так:
+
+def _get_event_type(self):
+	result = ''
+	if self._num_bytes_returned != 0:
+		result = self._ACTIONS.get(win32file.FILE_NOTIFY_INFORMATION(
+			self._buffer, self._num_bytes_returned)[0][0], 'Uncnown')
+	return result
+
+В этом методе используется константа _ACTIONS, содержащая возможные действия с отслеживаемым
+файлом или каталогом. Эта константа определена в виде словаря следующим образом:
+
+_ACTIONS = (
+	0х00000000: 'Unknown action',
+	0х00000001: 'Added',
+	0х00000002: 'Removed',
+	0х00000003: 'Modified',
+	0х00000004: 'Renamed from file or directory',
+	0х00000005: 'Renamed to file or directory'
+)
+
+Метод, возвращающий путь к отслеживаемому файлу:
+
+def _get_path(self):
+	result = ''
+	if self._num_bytes_returned != 0:
+		result = win32file.GetFinalPathNameByRandle(
+			self._directory,
+			win32con.FILE_NAME_NORMALIZED
+		)
+	return result
+
+Метод, возвращающий имя отслеживаемого файла, которое было сохранено в _buffer
+при наступлении события:
+
+def _get_file_name(self):
+	result = ''
+	if self._num_bytes_returned != 0:
+		result = win32file.FILE_NOTIFY_INFORMATION(
+			self._buffer, self._num_bytes_returned)[0][1]
+	return result
+
+Зайдействовать все это можно следующим образом (по аналогии с мониторинигом процессов):
+
+from threading import Thread
+import pywintpes
+import win32api
+import win32event
+import win32con
+import win32file
+import winnt
+
+#Не забываем вставить здесь описание классов FileMonitor and FileMpnitprAPI
+
+#Опишем класс Moitor, наследуемый от Thread
+
+class Monitor(Thread):
+	def __init__(self):
+		Thread.__init__(self)
+
+	def run(self):
+		#Используем значение notify_filter по умолчанию
+		file_mon = pymonitor.FileMonitorAPI(Path=r'e:\\example')
+		while True:
+			file_mon.update()
+			print(file_mon.timestamp,
+				file_mon.path,
+				file_mon.file_name,
+				file_mon.event_type
+			)
+
+# Создаем экземпляр класса Monitor
+mon = Monitor()
+
+# Запустим процесс мониторинга
+mon.staert()
