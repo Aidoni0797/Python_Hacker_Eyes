@@ -1,0 +1,38 @@
+Получение информациии об IP-адресах и доменах
+
+Чтобы проверить IP-адреса и домены, нужно сформировать и отправить GET-запрос с ключом,
+именем проверяемого домена либо IP в виде строки. Для проверки домена это выглядит так:
+
+api_url = 'https://www.virustotal.com/vtapi/v2/domain/report'
+params = dict(apikey='<ключ доступа>', omain='<имя домена>')
+response = requests.get(api_url, params=params)
+
+Для проверки IP-адреса:
+
+api_url = 'https://www.virustotal.com/vtapi/v2/ip-address/report'
+params = dict(apikey='<ключ доступа>', ip = '<IP-адрес>')
+response = requests.get(api_url, params=params)
+
+Ответы на такие запросы объемны и содержат много информации. Например, для IP 178.248.x.x 
+(Это IP Хакера) начала отчета, полученного с сервера VirusTotal, выглядит так:
+{
+	"country": "RU",
+	"response_code": 1,
+	"as_owner": "HLL LLC",
+	"verbose_msg": "IP address in dataset",
+	"continent": "EU",
+	"detected_urls":{
+		{
+		"url": "https://xakep.ru/author/drobotun",
+		"positives": 1,
+		"total": 72,
+		"scan_date": "2019-12-18 19:45:02"
+		},
+		{
+		"url": "https://xakp.ru/2019/12/18/linux-backup/",
+		"positives": 1,
+		"total": 72,
+		"scan_date": "2019-12-18 16:35:25"
+		},
+	}
+}
