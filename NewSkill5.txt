@@ -1,0 +1,86 @@
+Получение отчета о последнем сканировании файла
+
+Используя какой-либо из хешей или значение scan_id из ответа, можно получить отчет по 
+последнему сканированию файла (если файл уже загружался на VirusTotal). Для этого нужно
+сформировать GET-запрос и в запросе указать ключ доступа и идентифкатор файла.
+Например, если у нас есть Scan_id из предыдущего примера, то запрос будет выглядеть так:
+
+import json
+import requests
+
+api_url = 'https://www.virustotal.com/vtapi/v2/file/report'
+params = dict(apikey='<ключ доступа>'),
+resource = '275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f-1577043276'
+response = requests.get(api_url, params=params)
+if response.status_code==200:
+	result=response.json()
+	print(json.dumps(result,sort_keys=False,indent=4))
+
+В случае успеха в ответ мы увидим следующее:
+{
+	"response_code":1,
+	"verbose_msg":"Scan finished, information embedded",
+	"resource": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+	"shal": "3395856ce81f2b7382dee72602f798b642f14140",
+	"md5": "44d88612fea8a8f36de82e1278abb02f",
+	"sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+	"scan_date": "2019-11-27 08:06:03",
+	"permalink": "https://ww.virustotal.com/file/275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f/analysis/1577043276",
+	"positives": 59,
+	"total": 69,
+	"scans":{
+		"Bkav":{
+			"detected": true,
+			"version": "1.3.0.9899",
+			"result": "DOS.EiracA.Trojan",
+			"update": "20191220"
+		},
+		"DrWeb":{
+			"detected": true,
+			"version": "7.0.42.9300",
+			"result": "EICAR Test File (NOT a Virus!)",
+			"update": "20191222"
+		},
+		"MicroWorld-eScan":{
+			"detected": true,
+			"version": "14.0.297.0",
+			"result": "EICAR-Test-File",
+			"update": "20191222"
+		},
+		"Panda": {
+			"detected":true,
+			"version": "4.6.4.2",
+			"result": "EICAR-AV-TEST-FILE",
+			"update": "20191222"
+		},
+		"Qihoo-360":{
+			"detected": true,
+			"version": "1.0.0.1120",
+			"result": "qex.eicar.gen.gen",
+			"update": "20191222"
+		}
+	}
+}
+
+Здесь, как и в первом примере, получаем значения хешей файла, scan_id, permalink, значения
+response_code and verbose_msg. Также видим результаты сканирования файла антивирусами и общие
+результаты оценки total - сколько всего антивирусных движков было задействовано в проверке и
+positives - сколько антивирусов дали положительный вердикт.
+
+Чтобы вывести результаты сканирования всеми антивирусами в удобоваримом виде, можно, например,
+написать что-то вроде:
+
+import requests
+
+api_url = "https://www.virustotal.com/vtapi/v2/file/report"
+params = dict(apikey="<ключ доступа>",
+resource="275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f-1577043276")
+response = requests.get(api_url, params = params)
+if response.status_code == 200:
+	result = response.json()
+	for key in result['scans']:
+		print(key)
+		print('Detected:', result['scans'][key]['detected'])
+		print('Version:', result['scans'][key]['version'])
+		print('Update:', result['scans'][key]['update'])
+		print('Result:', result['scans'][key]['result'])
