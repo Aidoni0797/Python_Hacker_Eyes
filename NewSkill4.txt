@@ -1,0 +1,44 @@
+Отправка файла на сервер для сканирования
+Для отправки файла на сканирование необходимо сформировать POST-запрос на адрес
+https://www.virustotal.com/vtapi/v2, при этом в запросе нужно указать ключ доступа к API и
+передать сам файл (здесь есть ограничение на размер файла - не более 32 Мбайт).
+Это может выглядеть следующим образом (используем Python):
+
+import json
+import requests
+
+api_url = "https://www.virustotal.com/vtapi/v2/file/scan"
+
+params = dict(apikey = '<ключ доступа>')
+
+with open ('<путь к файлу>', 'rb') as file:
+	files = dict(file=('<путь к файлу>', file))
+	response = requests.post(api_url, files=files, params = params)
+
+if response.status_code == 200:
+	result = response.json()
+	print(json.dumps(result, sort_keys=False, indent=4))
+
+Здесь вместо строки <ключ доступа> необходимо вставить свой ключ доступа к API, а вместо
+<путь к файлу> - путь к файлу, который ты будешь отправлять в VirusTotal. Если у тебя нет
+библиотеки resuests, то поставь ее командой pip install requests.
+
+В ответ, если все прошло успешно и код состояния HTTP равен 200, мы получим примерно вот такую
+картину:
+(
+	"response_code": 1,
+	"verbose_msg": "Scan request successfully queued, come back later for the report",
+	"scan_id": "275a021bbfb6489e54d781899f7db9d1663fc695ec2fe2a2c4538aab651fd0f-1577043276",
+	"resource": "275a021bbfb6489e54d781899f7db9d1663fc695ec2fe2a2c4538aab651fd0f",
+	"shal": "3395856ce81f2b7382dee72602f798b642f14140",
+	"md5": "44d88612fea8a8f36de82e127abb02f",
+	"sha256": "275a021bbfb6489e54d781899f7db9d1663fc695ec2fe2a2c4538aab651fd0f"
+	"permalink": "https://www.virustotal.com/file/275a021bbfb6489e54d781899f7db9d1663fc695ec2fe2a2c4538aab651fd0f/analysis/1577043276"
+)
+
+Здесь мы види значения response_code and verbose_msg, а также хеши файла SHA-256, SHA-1 and MD5,
+ссылку на результаты сканирования файла на сайте permalink и идентификатор файла scan_id.
+
+В приведенных в главе примерах кода опущена обработка ошшибок. Помни, что в ходе открытия файла
+или отправки запросов на сервер могут возникать исключения: FileNotFoundError, если файла нет,
+requests.ConnectionError, requests.Timeout при ошибках соединения и т.д.
