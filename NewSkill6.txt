@@ -1,0 +1,44 @@
+Отправка URL на сервер для сканирования
+Чтобы отправить URL для сканирования, нам необходимо сформировать и послать POST-запрос,
+содержащий ключ доступа и сам URL:
+
+import json
+import requests
+
+api_url = "https://www.virustotal.com/vtapi/v2/url/scan"
+params = dict(apikey='<ключ доступа>', url='https://xakep.ru/author/drobotun/')
+response = requests.post(api_url, data=params)
+if response.status_code == 200:
+	result = response.json()
+	print(json.dumps(result, sort_keys=False,indent=4))
+
+В ответ мы получим примерно то же, что и при отправке файла, за исключением значений хеша.
+Содержимое поля scan_id можно использовать для получения отчета о сканировании данного URL.
+
+Получение отчета о результатах сканирования URL-адреса
+
+Сформируем GET-запрос с ключом доступа и укажем либо непосредственно сам URL в виде сьроки,
+либо scan_id, полученное с помощью предыдущей функции. Это будет выглядеть средующим образом:
+
+import json
+import requests
+
+api_url = 'https://www.virustotal.com/vtapi/v2/url/report'
+params=dict(apikey='<ключ доступа>', resource = 'https://xakep.ru/author/drobotun/', scan=0)
+response = requests.get(api_url, params=params)
+
+if response.status_code == 200:
+	result = response.json()
+	print(jspn.dumps(result, sort_keys=False, indent=4))
+
+Помимо ключа доступа и строки с URL здесь присутствует опциональный параметр scan - по умолчанию
+оон равен нулю. Если же его значение равно единице, то, когда информации о запрашиваемом URL
+в базе VirusTotal нет (URL ранее не проверялся), этот URL будет автоматически отправлен на сервер 
+для проверки, после чего в ответ мы получим ту же информацию, что и при отправке URL на сервер.
+Если этот параметр равен нулю (или не задавался), мы получим отчет об этом URL либо 
+(если информация о нем в базе VirusTotal отсутствует) ответ такого вида;
+{
+	"response_code":0,
+	"resource": "<запрашиваемый URL>",
+	"verbode_msg": "Resource does not exist in the dataset"
+}
