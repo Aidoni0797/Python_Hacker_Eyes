@@ -1,0 +1,139 @@
+Продолжаем с стр.136
+
+{
+	"attributes":{
+		"authentihash":"8fcc2f670a166ea78ca239375ed312055c74efdc1f47e79d69966461dd1b2fb6",
+		"creation_date":1270596357,
+		"exiftool":{
+			"CharactrSt": "Unicode",
+			"CodeSize": 20480,
+			"CompanyName": "TYV",
+			"EntryPoint": "0x109c",
+			"FileFlagsMask": "0x0000",
+			"FileOS": "Win32",
+			"FileSubtype": 0,
+			"FileType":"Win32 EXE",
+			"FileTypeExtension": "exe",
+			"FileVersion": 1.0,
+			"FileVersionNumber":"1.0.0.0",
+			"ImageFileCharacteristics":"No relocs, Executable, No line numbers, No symbols, 32-bit",
+			"SubsystemVersion":4.0,
+			"TimeStamp":"2010:04:07 00:25:57+01:00",
+			"UninitializedDataSize":0
+		}
+	}
+}
+
+или, например, информацию о секциях исполняемого файла:
+{
+	"sections":[
+		{
+			"entropy": 3.94,
+			"md5": "681b80f1ee0eb531df11c6a115d711",
+			"name": ".text",
+			"raw_size": 20480,
+			"virtual_address":4096,
+			"virtual_size":16588
+		},
+		{
+			"entropy": 0.0,
+			"md5": "d41d8cd98f00b204e9800998ecf8427e",
+			"name": ".data",
+			"raw_size":0,
+			"virtual_address":24576,
+			"virtual_size":2640
+		},	
+	]
+}
+
+Если файл ранее не загружался на сервер и ещещ не анализировался, то в ответ мы получим ошибку типа NotFoundError
+from HTTP-кодом состояния, равным 404:
+{
+	"error":{
+		"code":"NotFoundError",
+		"message":"File \"<идентификатор файла>"not found"
+	}
+}
+Чтобы повторно проанализировать файл, нужно также отправить на сервер GET-запрос, в котором
+в URL помещаем идентификатор файла, а в конце добавляем
+/analyse:
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/analyse'
+headers = {'x-apikey': '<ключ доступа к API>'}
+response = requests.get(api_url, headers = headers)
+
+Ответ будет включать в себя такой же дескриптор файла, как и в первом случае - при загрузке файла
+на сервер. И так же, как и в первом случае, идентификатор из дескриптора можно использовать для получения информации 
+об анализе файла через GET-запрос типа /analyses.
+
+Посмотреть комментарии пользователей сервиса, а также  результаты голосования по файлу можно,
+отправив на сервер соответствующий GET-запрос. Для получения комментариев:
+
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/comments'
+headers = {'x-apikey': '<ключ доступа к API>'}
+response = requests.get(api_url, headers=headers)
+
+Для получения результатов голосования:
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/votes'
+headers = {'x-apikey': '<ключ доступа к API>'}
+response = requests.get(api_url, headers=headers)
+
+В обоих случаях можно использовать дополнительный параметр limit, определяющий максимальное
+количество комментариев или голосов в ответе на запрос. Использовать этот параметр можно,
+например, так:
+
+limit = {'limit': str(<число голосов в ответе>)}
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/votes'
+headers = {'x-apikey':'<ключ доступа к API>'}
+response = requests.get(api_url, headers=headers, params=limit)
+
+Чтобы разместить свой комментарий или проголосовать за файл, создаем POST-запрос, 
+а комментарий или голос передаем как объект JSON:
+#Для отправки результатов голосования
+votes = ('data':{'type':'vote','attributes':('verdict':<'malicious' или 'harmless'>)})
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/votes'
+headers = {'x-apikey': '<ключ доступа к API>'}
+response = requests.post(api_url, headers=headers, json=votes)
+
+#Для отправки комментария
+comments = {'data':('type':'vote','attributes':{'text':<текст комментария>})}
+headers = {'x-apikey': '<ключ доступа к API>'}
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/comments'
+response = requests.post(api_url, headers=headers, json=comments)
+
+Чтобы получить дополнительную информацию о файле, можно запросить побробности о связанных
+с ним объектах. В данном случае объекты могут характиризовать, например, поведение файла
+(объект behaviours) or URL, IP-address, доменные имена (объекты contacted_urls, 
+contected_ips, contacted_domains).
+
+Интереснее всего объект behaviours. К примеру, для исполняемых файлов он будет включать
+в себя информацию о загружаемых модулях, создаваемых и запускаемых процессах, операциях с
+файловой системой и реестром, сетевых операциях.
+Чтобы получить эту информацию, отправляем GET-запрос:
+
+api_url = 'https://www.virustotal.com/api/v3/files/<значение идентификатора файла>/behaviours'
+headers = {'x-apikey':'<ключ доступа к API>'}
+response = requests.get(api_url, headers=headers)
+
+В ответ будет объект JSON с информацией о поведении файла:
+{
+	"data":[
+		{
+			"attribues":(
+				"analysis_date":1548112224,
+				"command_executions":[
+					"C:\\WINDOWS\\system32\\ntvdm.exe -f -i1",
+					"/bin/bash /private/tmp/eicar.com.sh"
+				],
+				"has_html_report": false,
+				"has_pcap": false,
+				"last_modification_date": 1577880343,
+				"modules_loaded":[
+					"c:\\windows\\system32\\user32.dll",
+					"c:\\windows\\system32\\imm32.dll",
+					"c:\\windows\\system32\\ntdll.dll",
+				]
+			)
+		}
+	]
+}
+#iDONi мало что поняла, скорее всего вообще не поняла, поочему не понимаешь
