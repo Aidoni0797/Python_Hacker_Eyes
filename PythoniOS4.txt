@@ -1,0 +1,59 @@
+Отправка фотографии на сервер по FTP.
+
+Уже известная нам библиотека clipboard позволяет работать не только с текстом, но и 
+с изображениями. Это открывает нам новые возможности. Как насчет скрипта, который позволяет
+сохранить фотографию из буфера обмена на FTP-сервер?
+
+import ftplib, clipboard
+
+#Получаем изображение и сохраняем в виде файла
+a = clipboard.get_image()
+filename = 'out.jpg'
+a.save(filename)
+
+#Подключаемся к серверу и заливаем картинку
+con = ftplib.FTP('Host', 'Login', 'Password')
+f = open(filename, 'rb')
+send = con.storbinary(filenam, f)
+con.close()
+
+Скрипт можно немного изменить, написав в первых двух строках.
+
+import ftplib, photos
+a = photos.capture_image()
+
+то iOS предложит сделать фотографию.
+
+Работа с удаленным сервером по SSH
+
+У многих из нас есть удаленные серверы. У кого-то это домашний медиапроигрыватель или
+файлопомойка? другие рулят серверами на Amazon(интересно что это такое). Как управлять ими
+с iPhone or iPad? Можно скачать какой-нибудь FTP-клиент, но это не вариант, если необходимо
+регулярно выполнять одинаковые задачи, например делать бэкап. Стивен Милард (Stephen Millard)
+написал скрипт (https://www.thoughtasylym.com/2013/07/21/Pythonista-Remote-Command-Execution/),
+позволяющий выполнять удаленные команды через SSH. В упрощенном виде (без проверки на правильность
+введенных данных и вывод логов) он выглядит так:
+
+import paramiko
+import console
+
+#Адрес, логин и имя исполняемой команды
+strComputer = 'адрес'
+strUser = 'логин'
+strPwd = 'пароль'
+strCommand = 'имя_команды'
+
+#Подключаемся к серверу
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(hosname = strComputer, username = strUser, password = strPwd)
+
+#Выполняем команду
+stdin, stdout, stderr = client.exec_command(strCommand)
+print stdout.read()
+
+client.close()
+
+Для выполнения набора команд достаточно скопировать строку "stdin, stdout, 
+stderr = client.exec_command(strCommand)" несколько раз с различными командами
+(либо перечислить все команды через точку с запятой)
